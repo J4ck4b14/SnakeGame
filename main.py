@@ -1,3 +1,4 @@
+from cProfile import label
 from tkinter import *
 import random
 
@@ -63,7 +64,7 @@ def next_turn(snake, food):
     if x == food.coordinates[0] and y == food.coordinates[1]:
         global score
         score += 1
-        label.config(text="Score:{}".format(score))
+        score_label.config(text="Score:{}".format(score))
         canvas.delete("food")
         food = Food() # This line creates a new Food object
     else:
@@ -110,31 +111,101 @@ def check_collisions(snake):
 
 def game_over():
     canvas.delete(ALL)
-    canvas.create_text(canvas.winfo_width()/2, canvas.winfo_height()/2, font=('consolas', 70), text="GAME OVER", fill="red", tag="gameover")
+    canvas.create_text(canvas.winfo_width()/2, canvas.winfo_height()/2, font=('Papyrus', 70), text="GAME OVER", fill="red", tag="gameover")
+
+'''
+    # Create retry button and pack
+    retry_button = Button(canvas, text="Try Again", command=start_game,font=('Papyrus', 20), fg="#AEAEAE", bg="green")
+    retry_button.pack(pady=20)
+
+    # Create main menu button and pack
+    main_menu = Button(canvas, text="Main Menu", command=show_main_menu, font=('Papyrus', 20), fg="#AEAEAE", bg="green")
+'''
+
+# Menu Functions
+def start_game():
+    # Hide the main menu
+    main_menu_frame.pack_forget()
+
+    # Resize the window to match the game dimensions (this took me by surprise, honestly)
+    window.geometry(f"{GAME_WIDTH}x{GAME_HEIGHT}")
+
+    # Show the game canvas and score label
+    score_label.pack()
+    canvas.pack()
+
+    # Start the game logic
+    global snake, good, score, direction
+
+    canvas.delete(ALL)
+
+    # Create snake and food objects
+    snake = Snake()
+    food = Food()
+
+    score = 0
+    direction = 'down'
+
+    score_label.config(text="Score:{}".format(score))
+    next_turn(snake, food)
+
+def show_options():
+    print("Options menu (WIP)")
+
+def quit_game():
+    window.quit()
+
+def show_main_menu():
+    canvas.pack_forget()
+    score_label.pack_forget()
+
+    main_menu_frame.pack(expand=True)
 
 # Set up the main window
 window = Tk()
-window.title("Snake Game by Juan Abia")
+window.title("Snake Game (by Juan Abia)")
 window.resizable(False, False)
 
-# Initialize score and direction
-score = 0
-direction = 'down'
+# Create the main menu frame
+main_menu_frame = Frame(window, bg="#0F0F0F")
 
-# Create score label
-label = Label(window, text="Score:{}".format(score), font=('consolas', 40))
-label.pack()
+# Create and pack a divider (so the main menu won't be at the top of the screen)
+divider_label = Label(main_menu_frame, text="", fg="#0F0F0F", bg="#0F0F0F")
+divider_label.pack(pady=20)
 
-# Create game canvas
+# Create and pack the title and subtitle in the main menu frame
+title_label = Label(main_menu_frame, text="Snake Game", font=('Papyrus', 60), fg="green", bg="black")
+title_label.pack(pady=2)
+
+subtitle_label = Label(main_menu_frame, text="By Juan Abia Merino", font=('Papyrus', 16), fg="#AEAEAE", bg="black")
+subtitle_label.pack(pady=20)
+
+# Main menu's buttons
+play_button = Button(main_menu_frame, text="Play", command=start_game,font=('Papyrus', 20), fg="#AEAEAE", bg="green")
+play_button.pack(pady=10)
+
+options_button = Button(main_menu_frame, text="Options", command=show_options,font=('Papyrus', 20), fg="#AEAEAE", bg="green")
+options_button.pack(pady=10)
+
+quit_button = Button(main_menu_frame, text="Quit", command=quit_game,font=('Papyrus', 20), fg="#AEAEAE", bg="green")
+quit_button.pack(pady=10)
+
+# Create score label and game canvas (UNPACKED)
+score_label = Label(window, text="Score:0", font=('consolas', 40))
 canvas = Canvas(window, bg=BACKGROUND_COLOR, height=GAME_HEIGHT, width=GAME_WIDTH)
-canvas.pack()
+
+# Show main menu initially
+show_main_menu()
 
 # Center the window on the screen
 window.update()
+
 window_width = window.winfo_width()
 window_height = window.winfo_height()
+
 screen_width = window.winfo_screenwidth()
 screen_height = window.winfo_screenheight()
+
 x = int((screen_width/2) - (window_width/2))
 y = int((screen_height/2) - (window_height/2))
 window.geometry(f"{window_width}x{window_height}+{x}+{y}")
@@ -144,13 +215,6 @@ window.bind('<Left>', lambda event: change_direction('left'))
 window.bind('<Right>', lambda event: change_direction('right'))
 window.bind('<Up>', lambda event: change_direction('up'))
 window.bind('<Down>', lambda event: change_direction('down'))
-
-# Create snake and food objects
-snake = Snake()
-food = Food()
-
-# Start the game
-next_turn(snake, food)
 
 # Start the Tkinter event loop
 window.mainloop()
