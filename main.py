@@ -1,10 +1,12 @@
-from cProfile import label
 from tkinter import *
 import random
 
 # Game constants
+SCORE_HEIGHT = 80
 GAME_WIDTH = 800
-GAME_HEIGHT = 600
+GAME_HEIGHT = 600 - SCORE_HEIGHT
+MENU_WIDTH = 400
+MENU_HEIGHT = 500
 SPEED = 50
 SPACE_SIZE = 20
 BODY_PARTS = 3
@@ -22,7 +24,7 @@ class Snake:
         # Initialize snake's starting position
         for i in range(0, BODY_PARTS):
             self.coordinates.append([0, 0])
-        
+
         # Create snake body
         for x, y in self.coordinates:
             square = canvas.create_rectangle(x, y, x + SPACE_SIZE, y + SPACE_SIZE, fill=SNAKE_COLOR, tag="snake")
@@ -75,14 +77,14 @@ def next_turn(snake, food):
 
     # Check for collisions
     if check_collisions(snake):
-        game_over()
+        death_feedback(snake, 5)
     else:
         # Schedule next turn
         window.after(SPEED, next_turn, snake, food)
 
 def change_direction(new_direction):
     global direction
-    
+
     # Prevent 180-degree turns
     if new_direction == 'left' and direction != 'right':
         direction = new_direction
@@ -109,26 +111,58 @@ def check_collisions(snake):
 
     return False
 
-def game_over():
-    canvas.delete(ALL)
-    canvas.create_text(canvas.winfo_width()/2, canvas.winfo_height()/2, font=('Papyrus', 70), text="GAME OVER", fill="red", tag="gameover")
+def death_feedback (snake, blinks_left):
+    if blinks_left > 0:
+        # Toggle the color of the snake's head
+        current_color = canvas.itemcget(snake.squares[0], "fill")
+        new_color = "#FF0000" if current_color == SNAKE_COLOR else SNAKE_COLOR
+        canvas.itemconfig(snake.squares[0], fill = new_color)
 
-'''
+        # Schedule the next blink
+        window.after(500, death_feedback, snake, blinks_left-1)
+    else:
+        # Afterwards, proceed to game over screen
+        game_over()
+
+def game_over():
+
+    canvas.delete(ALL)
+
+    # Hide canvas and show game over frame
+    canvas.pack_forget()
+    game_over_frame.pack(expand=True, fill=BOTH)
+
+    # Create Game Over label and pack it
+    game_over_label = Label(game_over_frame, font=('Helvetica', 70), text="Game Over", fg="red", bg=BACKGROUND_COLOR)
+    game_over_label.pack(pady=50)
+
     # Create retry button and pack
-    retry_button = Button(canvas, text="Try Again", command=start_game,font=('Papyrus', 20), fg="#AEAEAE", bg="green")
+    retry_button = Button(game_over_frame, text="Try Again", command=restart_game,font=('Papyrus', 20), fg="#AEAEAE", bg="green")
     retry_button.pack(pady=20)
 
     # Create main menu button and pack
-    main_menu = Button(canvas, text="Main Menu", command=show_main_menu, font=('Papyrus', 20), fg="#AEAEAE", bg="green")
-'''
+    main_menu_button = Button(game_over_frame, text="Main Menu", command=show_main_menu, font=('Papyrus', 20), fg="#AEAEAE", bg="green")
+    main_menu_button.pack(pady=10)
+
+def restart_game():
+    # Hide the game over frame
+    game_over_frame.pack_forget()
+
+    # Clear the game over frame of any widgets
+    for widget in game_over_frame.winfo_children():
+        widget.destroy()
+
+    # Start a new game
+    start_game()
 
 # Menu Functions
 def start_game():
     # Hide the main menu
     main_menu_frame.pack_forget()
+    game_over_frame.pack_forget()
 
     # Resize the window to match the game dimensions (this took me by surprise, honestly)
-    window.geometry(f"{GAME_WIDTH}x{GAME_HEIGHT}")
+    window.geometry(f"{GAME_WIDTH}x{GAME_HEIGHT + SCORE_HEIGHT}")
 
     # Show the game canvas and score label
     score_label.pack()
@@ -143,6 +177,7 @@ def start_game():
     snake = Snake()
     food = Food()
 
+    # Initialize
     score = 0
     direction = 'down'
 
@@ -158,16 +193,23 @@ def quit_game():
 def show_main_menu():
     canvas.pack_forget()
     score_label.pack_forget()
+    game_over_frame.pack_forget()
 
-    main_menu_frame.pack(expand=True)
+    # Clear the game over frame of any widgets
+    for widget in game_over_frame.winfo_children():
+        widget.destroy()
+
+    main_menu_frame.pack(expand=True, fill = BOTH)
+
 
 # Set up the main window
 window = Tk()
 window.title("Snake Game (by Juan Abia)")
 window.resizable(False, False)
 
-# Create the main menu frame
+# Create frames (main menu and game over)
 main_menu_frame = Frame(window, bg="#0F0F0F")
+game_over_frame = Frame(window, bg=BACKGROUND_COLOR)
 
 # Create and pack a divider (so the main menu won't be at the top of the screen)
 divider_label = Label(main_menu_frame, text="", fg="#0F0F0F", bg="#0F0F0F")
@@ -190,9 +232,10 @@ options_button.pack(pady=10)
 quit_button = Button(main_menu_frame, text="Quit", command=quit_game,font=('Papyrus', 20), fg="#AEAEAE", bg="green")
 quit_button.pack(pady=10)
 
-# Create score label and game canvas (UNPACKED)
+# Create score label and game canvas(UNPACKED)
 score_label = Label(window, text="Score:0", font=('consolas', 40))
 canvas = Canvas(window, bg=BACKGROUND_COLOR, height=GAME_HEIGHT, width=GAME_WIDTH)
+
 
 # Show main menu initially
 show_main_menu()
@@ -208,13 +251,17 @@ screen_height = window.winfo_screenheight()
 
 x = int((screen_width/2) - (window_width/2))
 y = int((screen_height/2) - (window_height/2))
-window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+window.geometry(f"{600}x{600}+{x}+{y}")
 
 # Bind arrow keys to change direction
 window.bind('<Left>', lambda event: change_direction('left'))
 window.bind('<Right>', lambda event: change_direction('right'))
 window.bind('<Up>', lambda event: change_direction('up'))
 window.bind('<Down>', lambda event: change_direction('down'))
+window.bind('<a>', lambda event: change_direction('left'))
+window.bind('<d>', lambda event: change_direction('right'))
+window.bind('<w>', lambda event: change_direction('up'))
+window.bind('<s>', lambda event: change_direction('down'))
 
 # Start the Tkinter event loop
 window.mainloop()
